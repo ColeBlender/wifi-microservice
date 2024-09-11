@@ -15,6 +15,18 @@ import {
 import { GuestServiceClient } from "./generated/guest";
 import { generateServiceError } from "./utils";
 import { Callback } from "./utils/types";
+import { connect, StringCodec } from "nats";
+
+const sc = StringCodec();
+
+async function publishGuestEvent(guestData: any) {
+  const nc = await connect({ servers: "nats://localhost:4222" });
+
+  nc.publish("guest.update", sc.encode(JSON.stringify(guestData)));
+  console.log("Guest update event published");
+
+  await nc.drain();
+}
 
 const server = new Server();
 const guestServiceClient = new GuestServiceClient(
@@ -51,18 +63,20 @@ server.addService(WifiServiceService, {
           return;
         }
 
-        guestServiceClient.incrementWifiLoginCount(
-          { lastName, roomNumber },
-          (error, response) => {
-            if (error) {
-              callback(generateServiceError(error), null);
-              return;
-            }
+        try {
+          publishGuestEvent({
+            event: "increment.wifi.login.count",
+            data: { lastName, roomNumber },
+          });
+          console.log("Wifi login count increment event published");
+        } catch (error) {
+          console.error(
+            "Failed to publish wifi login count increment event:",
+            error
+          );
+        }
 
-            const loginResponse: LoginResponse = { success: response.success };
-            callback(null, loginResponse);
-          }
-        );
+        callback(null, { success: true });
       }
     );
   },
