@@ -46,17 +46,21 @@ server.addService(WifiServiceService, {
     call: { request: LoginRequest },
     callback: Callback<LoginResponse>
   ) {
+    console.log("WiFi login request received");
     const { lastName, roomNumber } = call.request;
 
     guestServiceClient.getGuestByLastNameAndRoom(
       { lastName, roomNumber },
       (error, guest) => {
+        console.log("Get guest response sent");
         if (error) {
+          console.error("Error in get guest process:", error);
           callback(generateServiceError(error), null);
           return;
         }
 
         if (!guest) {
+          console.error("No user found");
           callback(
             {
               name: "NoUserError",
@@ -71,6 +75,7 @@ server.addService(WifiServiceService, {
         }
 
         try {
+          console.log("Publishing WiFi login count increment event");
           publishGuestEvent({
             event: "increment.wifi.login.count",
             data: { lastName, roomNumber },
@@ -84,6 +89,7 @@ server.addService(WifiServiceService, {
         }
 
         callback(null, { success: true });
+        console.log("WiFi login response sent");
       }
     );
   },
