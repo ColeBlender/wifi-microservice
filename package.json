@@ -1,11 +1,11 @@
 {
-  "name": "guests-microservice",
+  "name": "wifi-microservice",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "generate-proto": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=./src/generated --ts_proto_opt=outputServices=grpc-js,env=node,esModuleInterop=true -I ./src/proto guest.proto"
+    "generate-proto": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=./src/generated --ts_proto_opt=outputServices=grpc-js,env=node,esModuleInterop=true -I ./src/proto wifi.proto guest.proto"
   },
   "keywords": [],
   "author": "",

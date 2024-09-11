@@ -1,21 +1,16 @@
-# Guests Microservice
+# WiFi Microservice
 
-The **Guests Microservice** is part of the **MGM Grand WiFi Simulation** project and handles guest-related operations using **gRPC**. It interacts with **Supabase** for managing guest data such as room assignments and WiFi login counts.
+The **WiFi Microservice** is part of the **MGM Grand WiFi Simulation** project and handles the WiFi login process for guests. It communicates with the **Guests Microservice** using **gRPC** to validate guest details and increment their WiFi login count. This service interacts with the guest service to ensure that the user login experience is seamless and tracked.
 
 ## Features
 
-- Provides gRPC endpoints for guest check-ins, retrieving guest details, and updating WiFi login counts.
-- Uses **Supabase** to store guest information, including names, room numbers, and WiFi login activity.
+- Provides a **gRPC** endpoint for managing WiFi logins.
+- Communicates with the **Guests Microservice** to validate guest credentials and increment WiFi login counts.
+- Uses **Supabase** indirectly via the **Guests Microservice** for guest information management.
 - Dockerized for deployment.
 
-## gRPC Endpoints
+## gRPC Endpoint
 
-1. **CheckInGuest**: Registers a guest and assigns a room number.
-   - **Request**: `first_name`, `last_name`
-   - **Response**: `room_number`
-2. **GetGuestByLastNameAndRoom**: Retrieves guest details based on last name and room number.
-   - **Request**: `last_name`, `room_number`
-   - **Response**: `Guest` object
-3. **IncrementWifiLoginCount**: Increments the WiFi login count for a guest.
+1. **Login**: Handles the WiFi login process for guests.
    - **Request**: `last_name`, `room_number`
    - **Response**: `success` (boolean)

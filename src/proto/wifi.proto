@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package wifi;
+
+service WifiService {
+  rpc Login (LoginRequest) returns (LoginResponse) {}
+}
+
+message LoginRequest {
+  string last_name = 1;
+  int32 room_number = 2;
+}
+
+message LoginResponse {
+  bool success = 1;
+}

@@ -1,110 +1,74 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import { Metadata, Server, ServerCredentials } from "@grpc/grpc-js";
 import {
-  GuestServiceService,
-  CheckInGuestRequest,
-  CheckInGuestResponse,
-  GetGuestRequest,
-  Guest,
-  IncrementWifiLoginCountRequest,
-  IncrementWifiLoginCountResponse,
-} from "./generated/guest";
-import supabase from "./db";
-import { generateRoomNumber, generateServiceError } from "./utils";
+  Metadata,
+  Server,
+  ServerCredentials,
+  credentials,
+} from "@grpc/grpc-js";
+import {
+  WifiServiceService,
+  LoginRequest,
+  LoginResponse,
+} from "./generated/wifi";
+import { GuestServiceClient } from "./generated/guest";
+import { generateServiceError } from "./utils";
 import { Callback } from "./utils/types";
 
 const server = new Server();
+const guestServiceClient = new GuestServiceClient(
+  process.env.GUEST_SERVICE_URL || "localhost:50051",
+  credentials.createInsecure()
+);
 
-server.addService(GuestServiceService, {
-  async checkInGuest(
-    call: { request: CheckInGuestRequest },
-    callback: Callback<CheckInGuestResponse>
-  ) {
-    const { firstName, lastName } = call.request;
-    const roomNumber = await generateRoomNumber();
-
-    const { error } = await supabase.from("guests").insert({
-      first_name: firstName,
-      last_name: lastName,
-      room_number: roomNumber,
-    });
-
-    if (error) {
-      callback(generateServiceError(error), null);
-      return;
-    }
-
-    const response: CheckInGuestResponse = { roomNumber };
-    callback(null, response);
-  },
-
-  async getGuestByLastNameAndRoom(
-    call: { request: GetGuestRequest },
-    callback: Callback<Guest>
+server.addService(WifiServiceService, {
+  async login(
+    call: { request: LoginRequest },
+    callback: Callback<LoginResponse>
   ) {
     const { lastName, roomNumber } = call.request;
 
-    const { data, error } = await supabase
-      .from("guests")
-      .select("*")
-      .eq("last_name", lastName)
-      .eq("room_number", roomNumber)
-      .single();
+    guestServiceClient.getGuestByLastNameAndRoom(
+      { lastName, roomNumber },
+      (error, guest) => {
+        if (error) {
+          callback(generateServiceError(error), null);
+          return;
+        }
 
-    if (error) {
-      callback(generateServiceError(error), null);
-      return;
-    }
+        if (!guest) {
+          callback(
+            {
+              name: "NoUserError",
+              message: "No user found",
+              code: 13,
+              details: "No user found",
+              metadata: new Metadata(),
+            },
+            null
+          );
+          return;
+        }
 
-    if (!data) {
-      callback(
-        {
-          name: "NoUserError",
-          message: "No user found",
-          code: 13,
-          details: "No user found",
-          metadata: new Metadata(),
-        },
-        null
-      );
-      return;
-    }
+        guestServiceClient.incrementWifiLoginCount(
+          { lastName, roomNumber },
+          (error, response) => {
+            if (error) {
+              callback(generateServiceError(error), null);
+              return;
+            }
 
-    const guest: Guest = {
-      id: data.id,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      roomNumber: data.room_number,
-      wifiLoginCount: data.wifi_login_count,
-    };
-
-    callback(null, guest);
-  },
-
-  async incrementWifiLoginCount(
-    call: { request: IncrementWifiLoginCountRequest },
-    callback: Callback<IncrementWifiLoginCountResponse>
-  ) {
-    const { lastName, roomNumber } = call.request;
-
-    const { error } = await supabase.rpc("increment_wifi_login_count", {
-      last_name_input: lastName,
-      room_number_input: roomNumber,
-    });
-
-    if (error) {
-      callback(generateServiceError(error), null);
-      return;
-    }
-
-    const response: IncrementWifiLoginCountResponse = { success: true };
-    callback(null, response);
+            const loginResponse: LoginResponse = { success: response.success };
+            callback(null, loginResponse);
+          }
+        );
+      }
+    );
   },
 });
 
-const port = process.env.PORT || 50051;
+const port = process.env.PORT || 50052;
 server.bindAsync(
   `0.0.0.0:${port}`,
   ServerCredentials.createInsecure(),
