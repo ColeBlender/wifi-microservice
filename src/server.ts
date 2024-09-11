@@ -20,7 +20,12 @@ import { connect, StringCodec } from "nats";
 const sc = StringCodec();
 
 async function publishGuestEvent(guestData: any) {
-  const nc = await connect({ servers: "nats://localhost:4222" });
+  const nc = await connect({
+    servers:
+      process.env.NODE_ENV === "development"
+        ? "nats://localhost:4222"
+        : process.env.NATS_URL,
+  });
 
   nc.publish("guest.update", sc.encode(JSON.stringify(guestData)));
   console.log("Guest update event published");
@@ -30,7 +35,9 @@ async function publishGuestEvent(guestData: any) {
 
 const server = new Server();
 const guestServiceClient = new GuestServiceClient(
-  process.env.GUEST_SERVICE_URL || "localhost:50051",
+  process.env.NODE_ENV === "development"
+    ? "localhost:50051"
+    : process.env.GRPC_GUESTS_URL!,
   credentials.createInsecure()
 );
 
@@ -82,7 +89,7 @@ server.addService(WifiServiceService, {
   },
 });
 
-const port = process.env.PORT || 50052;
+const port = process.env.NODE_ENV === "development" ? 50052 : 50051;
 server.bindAsync(
   `0.0.0.0:${port}`,
   ServerCredentials.createInsecure(),
